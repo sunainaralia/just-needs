@@ -208,31 +208,63 @@ export const forgotPassword = asyncFunHandler(async (req, res, next) => {
 
 
 ///////////////// reset password////////////////////////
-export const resetPassword = asyncFunHandler(async (req, res, next) => {
-  let decodedtoken = req.body.otp;
-  console.log(typeof(req.body.otp))
-  if(!decodedtoken){
-    let err = new CustomErrorHandler("plz verify your otp", 403);
-    return next(err);
+export const verifyOtp = asyncFunHandler(async (req, res, next) => {
+  const { otp } = req.body;
+
+  // Check if OTP is provided
+  if (!otp) {
+    return next(new CustomErrorHandler("Please provide an OTP", 403));
   }
-  let user = await User.findOne({ otp: decodedtoken, otpExpiresIn : { $gt: Date.now() } });
+
+  // Find the user with the matching OTP and check if it hasn't expired
+  const user = await User.findOne({ otp, otpExpiresIn: { $gt: Date.now() } });
+
   if (!user) {
-    let err = new CustomErrorHandler("your otp provided is not valid or expired", 403);
-    return next(err);
-  };
-  // setting the user password
-  user.password = req.body.password;
-  user.confirmPassword = req.body.confirmPassword;
+    return next(new CustomErrorHandler("Invalid or expired OTP", 403));
+  }
+
+  // If OTP is valid, clear OTP fields to prevent reuse
   user.otp = undefined;
   user.otpExpiresIn = undefined;
   await user.save();
-  const loginToken = genrateToken(user._id);
+
+  // Send the user's ID in the response for the next step
   return res.status(200).json({
     success: true,
-    msg: "password is changed successfully",
-    token: loginToken
-  })
+    msg: "OTP verified successfully",
+    userId: user._id
+  });
 });
+export const setNewPassword = asyncFunHandler(async (req, res, next) => {
+  const { userId } = req.params;
+  const { password, confirmPassword } = req.body;
+
+  // Check if passwords match
+  if (password !== confirmPassword) {
+    return next(new CustomErrorHandler("Passwords do not match", 400));
+  }
+
+  // Find the user by ID
+  const user = await User.findById(userId);
+  if (!user) {
+    return next(new CustomErrorHandler("User not found", 404));
+  }
+
+  // Update the user's password
+  user.password = password;
+  user.confirmPassword = confirmPassword;
+  await user.save();
+
+  // Generate a new token for the user
+  const loginToken = genrateToken(user._id);
+
+  return res.status(200).json({
+    success: true,
+    msg: "Password changed successfully",
+    token: loginToken
+  });
+});
+
 
 
 ////////////////////////////// find client,admin,driver by id////////////////////////

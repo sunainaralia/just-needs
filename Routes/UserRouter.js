@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signUpUser, LoginUser, getUserProfile, editUser, changePassword, forgotPassword, resetPassword } from "../Controllers/UserController.js";
+import { signUpUser, LoginUser, getUserProfile, editUser, changePassword, forgotPassword, verifyOtp, setNewPassword } from "../Controllers/UserController.js";
 import VerifyToken from '../Middlewares/VerifyToken.js'
 
 export const userRouter = Router();
@@ -13,5 +13,7 @@ userRouter.route('/login/')
   .post(LoginUser)
 userRouter.route('/forgot-password/')
   .post(forgotPassword)
-userRouter.route('/reset-password/')
-  .patch(resetPassword)
+userRouter.route('/verify-otp/')
+  .patch(verifyOtp)
+userRouter.route('/set-password/:userId')
+  .patch(setNewPassword)
